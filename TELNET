@@ -1,0 +1,62 @@
+# Simulate the different types of internet traffic such as FTP and TELNET over a wired network and analyze the packet drop and packet delivery ratio in the network
+
+set ns [ new Simulator ]
+
+set namfile [ open lab5.nam w ]
+$ns namtrace-all $namfile
+
+set tracefile [ open lab5.tr w ]
+$ns trace-all $tracefile
+
+set n0 [ $ns node ]
+set n1 [ $ns node ]
+set n2 [ $ns node ]
+set n3 [ $ns node ]
+
+$ns duplex-link $n0 $n2 2Mb 10ms DropTail
+$ns duplex-link $n2 $n1 2Mb 10ms DropTail
+$ns duplex-link $n2 $n3 1Mb 10ms DropTail
+
+$ns queue-limit $n0 $n2 5
+$ns queue-limit $n2 $n1 5
+$ns queue-limit $n2 $n3 5
+
+set tcp [ new Agent/TCP ]
+$ns attach-agent $n0 $tcp
+
+set sink [ new Agent/TCPSink ]
+$ns attach-agent $n3 $sink
+
+$ns connect $tcp $sink
+
+set ftp [ new Application/FTP ]
+$ftp attach-agent $tcp
+$ftp set type_ FTP
+
+set udp [ new Agent/UDP ]
+$ns attach-agent $n1 $udp
+
+set null [ new Agent/Null ]
+$ns attach-agent $n3 $null
+
+$ns connect $udp $null
+
+set telnet [ new Application/Telnet ]
+$telnet attach-agent $udp
+$telnet set type_ Telnet
+
+proc Finish {} {
+global ns namfile tracefile
+$ns flush-trace
+close $namfile
+close $tracefile
+exec nam lab5.nam &
+exit 0
+}
+
+$ns at 0.1 "$telnet start"
+$ns at 0.5 "$ftp start"
+$ns at 23.9 "$telnet stop"
+$ns at 24.0 "$ftp stop"
+$ns at 25.0 "Finish"
+$ns run
