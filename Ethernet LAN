@@ -1,0 +1,66 @@
+#Simulate to study transmission of packets over Ethernet lan and determine the number of packets drop destination
+
+set ns [ new Simulator ]
+
+set namfile [ open lab4.nam w ]
+$ns namtrace-all $namfile
+
+set tracefile [ open lab4.tr w ]
+$ns trace-all $tracefile
+
+Agent/TCP set packetSize_ 1460
+
+set n0 [ $ns node ]
+set n1 [ $ns node ]
+set n2 [ $ns node ]
+set n3 [ $ns node ]
+set n4 [ $ns node ]
+
+$ns duplex-link $n0 $n1 1Mb 10ms DropTail
+$ns duplex-link $n1 $n2 1Mb 10ms DropTail
+$ns make-lan "$n2 $n3 $n4" 100Mb 1ms LL Queue/DropTail Mac/802_3
+Channel Phy/WiredPhy
+
+set errmodel [ new ErrorModel ]
+$errmodel set rate_ 0.2
+$errmodel ranvar [ new RandomVariable/Uniform ]
+$errmodel drop-target [ new Agent/Null ]
+$ns lossmodel $errmodel $n1 $n2
+
+set tcp [ new Agent/TCP ]
+$ns attach-agent $n0 $tcp
+
+set sink [ new Agent/TCPSink ]
+$ns attach-agent $n4 $sink
+
+$ns connect $tcp $sink
+
+set ftp [ new Application/FTP ]
+$ftp attach-agent $tcp
+
+set filesize [ expr 4*1024*1024 ]
+$ns at 0.0 "$ftp send $filesize"
+
+proc finish {} {
+global ns namfile tracefile
+$ns flush-trace
+close $namfile
+close $tracefile
+
+set awkCode {
+BEGIN {}
+{
+if ($1 == "d") {
+count_packets++;
+print $2, count_packets >> "lab4.data"
+}
+}
+END{}
+}
+exec awk $awkCode lab4.tr
+exec nam lab4.nam &
+exec xgraph -bb -tk -x Time -y Dropped_Packets lab4.data -bg white &
+exit 0
+}
+$ns at 100.0 "finish"
+$ns run
