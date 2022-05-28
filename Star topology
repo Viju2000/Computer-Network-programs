@@ -1,3 +1,6 @@
+#Simulate The network with 5 nodes n0,n1,n2,n3,n4. Forming a star topology. The node 'n4' is at the center. Node 'n0' is a TCP source, which transmits the packets to the node n3.( A TCP sink ) through the node 'n4'. node n1 is another traffic source and sends UDP packets to node 'n2' through 'n4'. The duration of the simulation time is 10sec.
+
+
 set ns [ new Simulator ]
 
 set namfile [ open lab2.nam w ]
